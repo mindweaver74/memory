@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>기억력의 신 - 주토피아(Jutopia)</title>
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --card-back: #1f2833;
+            --neon-pink: #ff007f;
+            --neon-blue: #00f0ff;
+            --text-color: #c5c6c7;
+            --heading-color: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 15px;
+            overflow-x: hidden;
+        }
+
+        /* 우주 배경 효과 */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #141519 0%, #0b0c10 100%);
+            opacity: 0.8;
+        }
+
+        header {
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 10px;
+        }
+
+        .game-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--heading-color);
+            text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink);
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        /* 대시보드 및 스코어 */
+        .dashboard {
+            background: rgba(31, 40, 51, 0.6);
+            border: 1px solid rgba(255, 0, 127, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            width: 100%;
+            max-width: 450px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .status-label {
+            font-size: 11px;
+            color: #86c232;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .status-value {
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .status-value.highlight {
+            color: var(--neon-blue);
+            text-shadow: 0 0 5px var(--neon-blue);
+        }
+
+        /* 프로그레스 바 (타이머) */
+        .timer-container {
+            width: 100%;
+            height: 8px;
+            background-color: #111;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        .timer-bar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
+            box-shadow: 0 0 8px var(--neon-blue);
+            transition: width 0.1s linear;
+        }
+
+        /* 콤보 & 피버 타임 연출 */
+        .message-container {
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 8px 0;
+            font-weight: 700;
+        }
+
+        .combo-badge {
+            background: linear-gradient(135deg, #ff007f, #7928ca);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.6);
+            animation: bounce 0.4s ease infinite alternate;
+            display: none;
+        }
+
+        .fever-badge {
+            background: linear-gradient(135deg, #00f0ff, #0070f3);
+            color: white;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            box-shadow: 0 0 15px var(--neon-blue);
+            animation: pulse 0.5s ease infinite alternate;
+            display: none;
+        }
+
+        /* 카드 그리드 게임판 */
+        .game-board {
+            display: grid;
+            gap: 10px;
+            width: 100%;
+            max-width: 450px;
+            aspect-ratio: 1 / 1;
+            margin: 5px auto 15px auto;
+        }
+
+        .game-board.grid-4x4 {
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+        }
+
+        .game-board.grid-4x5 {
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            aspect-ratio: 4 / 5;
+        }
+
+        /* 카드 컴포넌트 */
+        .card {
+            position: relative;
+            cursor: pointer;
+            perspective: 1000px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .card-inner {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            pointer-events: none;
+            opacity: 0.4;
+            transform: scale(0.95);
+            transition: all 0.4s ease;
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 카드 뒷면 (주토피아 테마) */
+        .card-back {
+            background: linear-gradient(135deg, #1f2833 0%, #0b0c10 100%);
+            color: var(--neon-pink);
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: inset 0 0 15px rgba(255, 0, 127, 0.2);
+            border: 2px solid rgba(255, 0, 127, 0.3);
+        }
+
+        .card:hover .card-back {
+            border-color: var(--neon-pink);
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
+        }
+
+        /* 카드 앞면 (이모지 노출) */
+        .card-front {
+            background: #232c3d;
+            transform: rotateY(180deg);
+            font-size: 28px;
+            border: 2px solid var(--neon-blue);
+            box-shadow: inset 0 0 15px rgba(0, 240, 255, 0.2);
+        }
+
+        /* 제어 버튼 프레임 */
+        .controls {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            text-decoration: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #45a29e, #1f2833);
+            color: #fff;
+            border: 1px solid rgba(69, 162, 158, 0.4);
+        }
+
+        .btn-reset:hover {
+            background: #45a29e;
+            box-shadow: 0 0 12px rgba(69, 162, 158, 0.6);
+        }
+
+        .btn-home {
+            background: #111;
+            color: #999;
+            border: 1px solid #333;
+        }
+
+        .btn-home:hover {
+            color: #fff;
+            border-color: #666;
+        }
+
+        /* 모달 레이아웃 (게임오버/클리어) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(8px);
+        }
+
+        .modal-content {
+            background: #1f2833;
+            border: 2px solid var(--neon-pink);
+            padding: 30px 20px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 360px;
+            width: 100%;
+            box-shadow: 0 0 30px rgba(255, 0, 127, 0.5);
+            animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-title {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .modal-score-info {
+            font-size: 16px;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        .modal-score-info span {
+            color: var(--neon-blue);
+            font-weight: 700;
+        }
+
+        .btn-action {
+            background: linear-gradient(135deg, var(--neon-pink), #7928ca);
+            color: white;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 25px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 0, 127, 0.4);
+            width: 100%;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 0, 127, 0.6);
+        }
+
+        /* 애니메이션 키프레임 */
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-4px); }
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); box-shadow: 0 0 10px var(--neon-blue); }
+            to { transform: scale(1.05); box-shadow: 0 0 20px var(--neon-blue); }
+        }
+
+        @keyframes scaleUp {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* 반응형 텍스트 크기 제어 */
+        @media (max-height: 700px) {
+            .game-title { font-size: 22px; }
+            .card-front { font-size: 22px; }
+            .card-back { font-size: 18px; }
+            body { padding: 10px 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stars"></div>
+
+    <header>
+        <div class="game-title">🧠 기억력의 신</div>
+    </header>
+
+    <div class="dashboard">
+        <div class="status-row">
+            <div class="status-item">
+                <span class="status-label">STAGE</span>
+                <span class="status-value highlight" id="stage-val">1</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">SCORE</span>
+                <span class="status-value" id="score-val">0</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">HIGH SCORE</span>
+                <span class="status-value" id="highscore-val">0</span>
+            </div>
+        </div>
+        <div class="timer-container">
+            <div class="timer-bar" id="timer-bar"></div>
+        </div>
+    </div>
+
+    <div class="message-container">
+        <div class="combo-badge" id="combo-badge">2 COMBO 🔥</div>
+        <div class="fever-badge" id="fever-badge">⚡ FEVER TIME (X2) ⚡</div>
+    </div>
+
+    <div class="game-board grid-4x4" id="game-board"></div>
+
+    <div class="controls">
+        <button class="btn btn-reset" onclick="resetGame()">다시 시작</button>
+        <a href="https://mindweaver74.github.io/Jutopia" class="btn btn-home">🎮 Jutopia</a>
+    </div>
+
+    <div class="modal" id="game-modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modal-title">GAME OVER</div>
+            <div class="modal-score-info" id="modal-info">
+                최종 스테이지: <span id="modal-stage">1</span> (카드 <span id="modal-cards">4</span>장)<br>
+                최종 점수: <span id="modal-score">0</span>
+            </div>
+            <button class="btn-action" id="modal-btn" onclick="modalAction()">다시 도전</button>
+        </div>
+    </div>
+
+    <script>
+        // 이모지 풀 구성
+        const emojiPool = [
+            '🔮', '🚀', '👽', '💎', '👑', '🍀', '🔥', '🌟', 
+            '🐱', '🐸', '🦊', '🐯', '🎃', '👻', '👾', '🤖', 
+            '🍉', '🍕', '🍺', '🎈', '🎸', '⚽', '🔑', '🏹'
+        ];
+
+        // 게임 상태 관리 변수들
+        let stage = 1;
+        let score = 0;
+        let highScore = localStorage.getItem('jutopia_memory_highscore') || 0;
+        
+        let maxTime = 30; // 기본 세팅 시간 (초)
+        let timeLeft = 30;
+        let timerInterval = null;
+        let isFlippingAllowed = false;
+        
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let totalPairs = 8;
+        
+        let comboCount = 0;
+        let isFeverMode = false;
+        let feverTimeout = null;
+
+        // DOM 요소 캐싱
+        const boardEl = document.getElementById('game-board');
+        const stageEl = document.getElementById('stage-val');
+        const scoreEl = document.getElementById('score-val');
+        const highscoreEl = document.getElementById('highscore-val');
+        const timerBarEl = document.getElementById('timer-bar');
+        const comboBadge = document.getElementById('combo-badge');
+        const feverBadge = document.getElementById('fever-badge');
+        
+        const modalEl = document.getElementById('game-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalStage = document.getElementById('modal-stage');
+        const modalScore = document.getElementById('modal-score');
+        const modalBtn = document.getElementById('modal-btn');
+
+        // 초기 구동 실행
+        highscoreEl.textContent = highScore;
+        initStage();
+
+        function getStageCfg(s){
+            var cfg = [
+                {pairs:2,  cols:2, rows:2, time:10},
+                {pairs:4,  cols:4, rows:2, time:15},
+                {pairs:6,  cols:4, rows:3, time:20},
+                {pairs:8,  cols:4, rows:4, time:25},
+                {pairs:10, cols:4, rows:5, time:30},
+                {pairs:12, cols:4, rows:6, time:35},
+                {pairs:15, cols:5, rows:6, time:40},
+                {pairs:18, cols:6, rows:6, time:45},
+            ];
+            return cfg[Math.min(s-1, cfg.length-1)];
+        }
+
+        function initStage() {
+            clearInterval(timerInterval);
+            boardEl.innerHTML = '';
+            flippedCards = [];
+            matchedPairs = 0;
+            isFlippingAllowed = false;
+            comboCount = 0;
+            deactivateFever();
+            comboBadge.style.display = 'none';
+
+            stageEl.textContent = stage;
+            scoreEl.textContent = score;
+
+            const cfg = getStageCfg(stage);
+            totalPairs = cfg.pairs;
+            maxTime = cfg.time;
+            boardEl.style.gridTemplateColumns = `repeat(${cfg.cols}, 1fr)`;
+            boardEl.style.gridTemplateRows = `repeat(${cfg.rows}, 1fr)`;
+            boardEl.style.aspectRatio = `${cfg.cols} / ${cfg.rows}`;
+            boardEl.className = 'game-board';
+            
+            timeLeft = maxTime;
+            updateTimerBar();
+
+            // 이모지 선택 및 셔플 무작위화
+            const selectedEmojis = [];
+            const shuffledPool = [...emojiPool].sort(() => 0.5 - Math.random());
+            for(let i=0; i<totalPairs; i++) {
+                selectedEmojis.push(shuffledPool[i]);
+            }
+            
+            // 더블링 매칭 어레이 생성 및 최종 랜덤 정렬
+            cards = [...selectedEmojis, ...selectedEmojis].sort(() => 0.5 - Math.random());
+
+            // 카드 컴포넌트 동적 DOM 생성 및 부착
+            cards.forEach((emoji, index) => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.emoji = emoji;
+                card.dataset.index = index;
+
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front">${emoji}</div>
+                        <div class="card-back">?</div>
+                    </div>
+                `;
+                
+                card.addEventListener('click', handleCardClick);
+                boardEl.appendChild(card);
+            });
+
+            // 스테이지 시작 배너
+            const _cfg = getStageCfg(stage);
+            comboBadge.style.display = 'block';
+            comboBadge.textContent = 'STAGE ' + stage + ' · 카드 ' + (_cfg.pairs*2) + '장!';
+            comboBadge.style.background = 'linear-gradient(135deg,#00f0ff,#0070f3)';
+            setTimeout(()=>{comboBadge.style.background='';comboBadge.style.display='none';}, 1800);
+
+            // 카드 수에 비례한 힌트 노출 시간 (카드 많을수록 더 오래 보여줌)
+            const peekMs = Math.min(5000, 1000 + _cfg.pairs * 300);
+            setTimeout(() => {
+                document.querySelectorAll('.card').forEach(c => c.classList.add('flipped'));
+            }, 200);
+
+            setTimeout(() => {
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('flipped'));
+                isFlippingAllowed = true;
+                startTimer();
+            }, 200 + peekMs);
+        }
+
+        // 타이머 카운트 다운 시작
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    updateTimerBar();
+                    gameOver();
+                } else {
+                    updateTimerBar();
+                }
+            }, 100);
+        }
+
+        function updateTimerBar() {
+            const percentage = (timeLeft / maxTime) * 100;
+            timerBarEl.style.width = `${percentage}%`;
+        }
+
+        // 카드 클릭 인터랙션 핸들러
+        function handleCardClick() {
+            if (!isFlippingAllowed) return;
+            if (this.classList.contains('flipped') || this.classList.contains('matched')) return;
+            if (flippedCards.length >= 2) return;
+
+            this.classList.add('flipped');
+            flippedCards.push(this);
+
+            if (flippedCards.length === 2) {
+                checkMatch();
+            }
+        }
+
+        // 두 카드의 짝 일치 판정 알고리즘
+        function checkMatch() {
+            isFlippingAllowed = false;
+            const [card1, card2] = flippedCards;
+
+            if (card1.dataset.emoji === card2.dataset.emoji) {
+                // 일치 판정 성공 리워드 처리
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+                
+                comboCount++;
+                calculateScore();
+
+                // 3콤보 연속 성공 시 피버 모드 트래킹 작동
+                if (comboCount >= 3) {
+                    activateFever();
+                } else if (comboCount > 1) {
+                    comboBadge.textContent = `${comboCount} COMBO 🔥`;
+                    comboBadge.style.display = 'block';
+                }
+
+                flippedCards = [];
+                isFlippingAllowed = true;
+
+                // 클리어 조건 달성 여부 확인
+                if (matchedPairs === totalPairs) {
+                    stageClear();
+                }
+            } else {
+                // 불일치 판정 패널티 처리
+                comboCount = 0;
+                comboBadge.style.display = 'none';
+                
+                setTimeout(() => {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    flippedCards = [];
+                    isFlippingAllowed = true;
+                }, 800);
+            }
+        }
+
+        // 피버타임 보너스 발동 연출
+        function activateFever() {
+            isFeverMode = true;
+            feverBadge.style.display = 'block';
+            comboBadge.style.display = 'none';
+            
+            // 피버 타임 보너스 시계 증가 처리
+            timeLeft = Math.min(maxTime, timeLeft + 2);
+            updateTimerBar();
+        }
+
+        function deactivateFever() {
+            isFeverMode = false;
+            feverBadge.style.display = 'none';
+        }
+
+        // 점수 획득 공식 시스템
+        function calculateScore() {
+            let basePoints = 100;
+            let comboBonus = (comboCount - 1) * 20;
+            if (comboBonus < 0) comboBonus = 0;
+
+            let earned = basePoints + comboBonus;
+            if (isFeverMode) {
+                earned *= 2; // 피버타임 스코어 2배 증폭
+            }
+
+            score += earned;
+            scoreEl.textContent = score;
+
+            if (score > highScore) {
+                highScore = score;
+                highscoreEl.textContent = highScore;
+                localStorage.setItem('jutopia_memory_highscore', highScore);
+            }
+        }
+
+        // 스테이지 클리어 연출 및 세팅
+        function stageClear() {
+            clearInterval(timerInterval);
+            isFlippingAllowed = false;
+            
+            // 스테이지 클리어 보너스 점수 가산
+            const timeBonus = Math.floor(timeLeft * 10);
+            const pairBonus = getStageCfg(stage).pairs * 50;
+            score += pairBonus + (stage * 100) + timeBonus;
+            scoreEl.textContent = score;
+
+            setTimeout(() => {
+                showModal("STAGE CLEAR 🎉", `스테이지 보너스 및 잔여시간 점수 가산 완료!`, "다음 스테이지", true);
+            }, 600);
+        }
+
+        // 게임오버 시스템 트리거
+        function gameOver() {
+            clearInterval(timerInterval);
+            isFlippingAllowed = false;
+            showModal("GAME OVER 💀", `아쉽군요! 뇌가 아직 덜 말랑말랑한가 봅니다.`, "다시 도전", false);
+        }
+
+        // 공통 커스텀 모달 스크린 오픈 함수
+        function showModal(title, text, btnText, isClear) {
+            modalTitle.textContent = title;
+            modalStage.textContent = stage;
+            const mc = document.getElementById('modal-cards');
+            if(mc) mc.textContent = getStageCfg(stage).pairs * 2;
+            modalScore.textContent = score;
+            modalBtn.textContent = btnText;
+            
+            // 성공/실패 톤 레이아웃 변경 적용
+            if (isClear) {
+                modalEl.querySelector('.modal-content').style.borderColor = "var(--neon-blue)";
+                modalEl.querySelector('.modal-content').style.boxShadow = "0 0 30px rgba(0, 240, 255, 0.5)";
+                modalBtn.style.background = "linear-gradient(135deg, var(--neon-blue), #0070f3)";
+                modalBtn.style.boxShadow = "0 4px 15px rgba(0, 240, 255, 0.4)";
+                modalBtn.dataset.action = "next";
+            } else {
+                modalEl.querySelector('.modal-content').style.borderColor = "var(--neon-pink)";
+                modalEl.querySelector('.modal-content').style.boxShadow = "0 0 30px rgba(255, 0, 127, 0.5)";
+                modalBtn.style.background = "linear-gradient(135deg, var(--neon-pink), #7928ca)";
+                modalBtn.style.boxShadow = "0 4px 15px rgba(255, 0, 127, 0.4)";
+                modalBtn.dataset.action = "retry";
+            }
+            
+            modalEl.style.display = 'flex';
+        }
+
+        // 모달 전용 액션 리스너
+        function modalAction() {
+            const action = modalBtn.dataset.action;
+            modalEl.style.display = 'none';
+            
+            if (action === "next") {
+                stage++;
+                initStage();
+            } else {
+                // 완전 리셋 초기화 복구
+                stage = 1;
+                score = 0;
+                initStage();
+            }
+        }
+
+        // 유저 임의 수동 리셋 핸들러
+        function resetGame() {
+            if (confirm("정말 처음부터 다시 시작하시겠습니까? (현재 점수 초기화)")) {
+                stage = 1;
+                score = 0;
+                initStage();
+            }
+        }
+    </script>
+</body>
+</html>
